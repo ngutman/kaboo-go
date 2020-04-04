@@ -2,10 +2,9 @@ package main
 
 // Import our dependencies. We'll use the standard HTTP library as well as the gorilla router for this app
 import (
+	"github.com/ngutman/kaboo-server-go/transport"
 	"log"
 	"os"
-
-	"github.com/ngutman/kaboo-server-go/internal/kaboo"
 
 	cli "github.com/urfave/cli/v2"
 )
@@ -45,7 +44,7 @@ func main() {
 		},
 		Usage: "Kaboo server FTW",
 		Action: func(c *cli.Context) error {
-			server := kaboo.NewServer(restPort, websocketPort, auth0Domain, auth0Audience)
+			server := transport.NewServer(restPort, websocketPort, auth0Domain, auth0Audience)
 			server.Start()
 			return nil
 		},
