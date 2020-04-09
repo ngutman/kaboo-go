@@ -1,9 +1,12 @@
 package transport
 
 import (
+	"context"
 	"fmt"
 	"github.com/auth0-community/go-auth0"
+	"github.com/ngutman/kaboo-server-go/api/types"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"net/http"
 )
 
@@ -28,6 +31,10 @@ func (j *JWTAuthMiddleware) Handle(next func(w http.ResponseWriter, r *http.Requ
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Unauthorized"))
 		} else {
+			claims := jwt.Claims{}
+			validator.Claims(r, token, &claims)
+			// Attach user id to request context
+			r = r.WithContext(context.WithValue(r.Context(), types.ContextUserKey, claims.Subject))
 			next(w, r)
 		}
 	}

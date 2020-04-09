@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/ngutman/kaboo-server-go/service"
+	"github.com/ngutman/kaboo-server-go/api/types"
+	"github.com/ngutman/kaboo-server-go/backend"
+	"github.com/ngutman/kaboo-server-go/models"
 	"log"
 	"net/http"
 	"os"
@@ -21,15 +23,17 @@ type Server struct {
 }
 
 type API struct {
-	gameController service.GameController
+	gameBackend types.GameBackend
 }
 
 // NewServer initializes a new kaboo server
 func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience string) Server {
+	var db models.Db
+	db.Open("mongodb://localhost:27017/")
 	return Server{
 		JWTAuthMiddleware{auth0Domain, auth0Audience},
 		API{
-			service.GameController{},
+			gameBackend: backend.NewGameController(&db),
 		},
 		restPort,
 		wsPort,
@@ -55,7 +59,7 @@ func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Creating a new game named %s with max players %d password %s\n", req.Name, req.MaxPlayersCount, req.Password)
-	res, err := a.gameController.NewGame(req.Name, req.MaxPlayersCount, req.Password)
+	res, err := a.gameBackend.NewGame(r.Context(), req.Name, req.MaxPlayersCount, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
