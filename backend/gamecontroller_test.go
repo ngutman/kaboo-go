@@ -7,6 +7,8 @@ import (
 	"github.com/ngutman/kaboo-server-go/api/types"
 
 	"github.com/ngutman/kaboo-server-go/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -19,18 +21,25 @@ const (
 func TestCreatingNewGame(t *testing.T) {
 	db, client := clearAndOpenDb(t)
 
-	addUserToDB(t, client, "userid123", "user", "user@user.com")
+	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
 
 	controller := NewGameController(db)
-	context := contextWithUserID("userid123")
-	result, err := controller.NewGame(context, "game1", 5, "password")
+	ctx := contextWithUserID("userid123")
+	result, err := controller.NewGame(ctx, "game1", 5, "password")
+	createdGameID, _ := primitive.ObjectIDFromHex(result.GameID)
 	if err != nil {
 		t.Errorf("Error creating a new game, %v\n", err)
 	}
 	t.Logf("Created a new game result %v\n", result)
-	result, err = controller.NewGame(context, "game1", 5, "password")
+	result, err = controller.NewGame(ctx, "game1", 5, "password")
 	if err == nil {
 		t.Errorf("Should have failed creating a new game for user")
+	}
+	var game models.KabooGame
+	client.Database(TestingDB).Collection(models.GamesCollection).
+		FindOne(context.Background(), bson.D{bson.E{Key: "_id", Value: createdGameID}}).Decode(&game)
+	if game.Owner != user.ID {
+		t.Errorf("Unexpected game created %v\n", game)
 	}
 }
 
@@ -56,7 +65,8 @@ func addUserToDB(t *testing.T, client *mongo.Client, externalUserID string, user
 		ExternalID: externalUserID,
 		Username:   username,
 	}
-	_, err := client.Database(TestingDB).Collection("users").InsertOne(context.Background(), user)
+	userID, err := client.Database(TestingDB).Collection("users").InsertOne(context.Background(), user)
+	user.ID = userID.InsertedID.(primitive.ObjectID)
 	if err != nil {
 		t.Errorf("Couldn't add user %v\n", err)
 		return nil

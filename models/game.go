@@ -18,20 +18,33 @@ const (
 	GameStateOngoing
 )
 
+const (
+	// GamesCollection name of the games collection
+	GamesCollection = "games"
+)
+
 // KabooGame represents a game, contains the game state
 type KabooGame struct {
-	ID    primitive.ObjectID `bson:"_id,omitempty"`
-	Owner primitive.ObjectID `bson:"owner"`
-	State GameState          `bson:"state"`
+	ID         primitive.ObjectID   `bson:"_id,omitempty"`
+	Owner      primitive.ObjectID   `bson:"owner"`
+	State      GameState            `bson:"state"`
+	Players    []primitive.ObjectID `bson:"players"`
+	MaxPlayers int                  `bson:"max_players"`
+	Name       string               `bson:"name"`
+	Password   string               `bson:"password"`
 }
 
-// CreateEmptyGame creates a new empty game for user
-func (d *Db) CreateEmptyGame(owner *User) *KabooGame {
-	collection := d.database.Collection("games")
+// CreateGame creates a game for the given user
+func (d *Db) CreateGame(owner *User, name string, maxPlayers int, password string) *KabooGame {
+	collection := d.database.Collection(GamesCollection)
 	game := KabooGame{
 		primitive.NilObjectID,
 		owner.ID,
 		GameStateInitializing,
+		[]primitive.ObjectID{owner.ID},
+		maxPlayers,
+		name,
+		password,
 	}
 	res, err := collection.InsertOne(context.Background(), game)
 	if err != nil {

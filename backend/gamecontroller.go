@@ -26,7 +26,7 @@ func NewGameController(db *models.Db) *GameController {
 // NewGame create a new game returning the created game id on success
 // A player can only create a game if he's not participating in any running games
 func (g *GameController) NewGame(ctx context.Context, name string,
-	playersCount int, password string) (*types.NewGameResult, error) {
+	maxPlayers int, password string) (*types.NewGameResult, error) {
 	var result types.NewGameResult
 	user, err := g.db.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
 	if err != nil {
@@ -35,7 +35,7 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 	if g.games[user.ID] != nil {
 		return nil, errors.New("User already in game")
 	}
-	game := g.db.CreateEmptyGame(user)
+	game := g.db.CreateGame(user, name, maxPlayers, password)
 	g.games[user.ID] = game
 	result.GameID = game.ID.Hex()
 	return &result, nil
