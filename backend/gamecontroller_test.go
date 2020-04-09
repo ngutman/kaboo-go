@@ -18,9 +18,8 @@ const (
 	TestingDB  = "kaboo_test"
 )
 
-func TestCreatingNewGame(t *testing.T) {
+func Test_CreatingNewGame(t *testing.T) {
 	db, client := clearAndOpenDb(t)
-
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
 
 	controller := NewGameController(db)
@@ -40,6 +39,17 @@ func TestCreatingNewGame(t *testing.T) {
 		FindOne(context.Background(), bson.D{bson.E{Key: "_id", Value: createdGameID}}).Decode(&game)
 	if game.Owner != user.ID {
 		t.Errorf("Unexpected game created %v\n", game)
+	}
+}
+
+func Test_LoadingActiveGames(t *testing.T) {
+	db, client := clearAndOpenDb(t)
+	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
+	// Create a game before loading the controller
+	db.CreateGame(user, "game1", 4, "password")
+	controller := NewGameController(db)
+	if controller.activeGames[user.ID] == nil {
+		t.Errorf("Should have loaded active game from db")
 	}
 }
 

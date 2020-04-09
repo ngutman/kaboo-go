@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -33,6 +35,7 @@ type KabooGame struct {
 	ID         primitive.ObjectID   `bson:"_id,omitempty"`
 	Owner      primitive.ObjectID   `bson:"owner"`
 	State      GameState            `bson:"state"`
+	Active     bool                 `bson:"active"`
 	Players    []primitive.ObjectID `bson:"players"`
 	MaxPlayers int                  `bson:"max_players"`
 	Name       string               `bson:"name"`
@@ -53,6 +56,7 @@ func (d *Db) CreateGame(owner *User, name string, maxPlayers int, password strin
 		primitive.NilObjectID,
 		owner.ID,
 		GameStateInitializing,
+		true,
 		[]primitive.ObjectID{owner.ID},
 		maxPlayers,
 		name,
@@ -70,6 +74,17 @@ func (d *Db) CreateGame(owner *User, name string, maxPlayers int, password strin
 
 // FetchActiveGames returns active games from the db
 func (d *Db) FetchActiveGames() (results []*KabooGame, err error) {
+	filter := bson.D{bson.E{Key: "active", Value: true}}
+	cursor, err := d.database.Collection(GamesCollection).Find(context.Background(), filter)
+	if err != nil {
+		log.Errorf("Error fetching active games, %v\n", err)
+		return results, err
+	}
+	err = cursor.All(context.Background(), &results)
+	if err != nil {
+		log.Errorf("Error fetching active games, %v\n", err)
+		return results, err
+	}
 	return results, nil
 }
 

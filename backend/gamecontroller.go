@@ -18,10 +18,12 @@ type GameController struct {
 
 // NewGameController returns a new game controller
 func NewGameController(db *models.Db) *GameController {
-	return &GameController{
+	controller := GameController{
 		activeGames: make(map[primitive.ObjectID]*models.KabooGame),
 		db:          db,
 	}
+	controller.loadGames()
+	return &controller
 }
 
 // NewGame create a new game returning the created game id on success
@@ -33,7 +35,7 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 		return nil, err
 	}
 	if g.activeGames[user.ID] != nil {
-		log.Debug("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
+		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return nil, errors.New("User already in game")
 	}
 	game, err := g.db.CreateGame(user, name, maxPlayers, password)
@@ -48,5 +50,13 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 }
 
 func (g *GameController) loadGames() error {
+	games, err := g.db.FetchActiveGames()
+	if err != nil {
+		return err
+	}
+	for _, game := range games {
+		g.activeGames[game.Owner] = game
+	}
+	log.Infof("Loaded %d active games\n", len(games))
 	return nil
 }
