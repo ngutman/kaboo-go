@@ -46,7 +46,7 @@ func Test_LoadingActiveGames(t *testing.T) {
 	db, client := clearAndOpenDb(t)
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
 	// Create a game before loading the controller
-	db.CreateGame(user, "game1", 4, "password")
+	db.Games.CreateGame(user, "game1", 4, "password")
 	controller := NewGameController(db)
 	if controller.activeGames[user.ID] == nil {
 		t.Errorf("Should have loaded active game from db")

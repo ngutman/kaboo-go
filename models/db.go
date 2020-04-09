@@ -13,6 +13,7 @@ import (
 type Db struct {
 	client   *mongo.Client
 	database *mongo.Database
+	Games    *Games
 }
 
 // Open a new connection to the db and sets the the client
@@ -30,5 +31,8 @@ func (d *Db) Open(uri string, dbname string) {
 	}
 	d.client = client
 	d.database = client.Database(dbname)
+	d.Games = &Games{
+		collection: d.database.Collection(GamesCollection),
+	}
 	log.Infof("Connected to MongoDB (%v)\n", uri)
 }
