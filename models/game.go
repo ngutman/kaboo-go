@@ -45,12 +45,12 @@ type KabooGame struct {
 }
 
 // Games is handling all game related actions against the db
-type Games struct {
+type GamesDAO struct {
 	collection *mongo.Collection
 }
 
 // CreateGame creates a game for the given user
-func (g *Games) CreateGame(owner *User, name string, maxPlayers int, password string) (*KabooGame, error) {
+func (g *GamesDAO) CreateGame(owner *User, name string, maxPlayers int, password string) (*KabooGame, error) {
 	seed, err := generateGameSeed()
 	log.Tracef("Generated seed - %v\n", seed)
 	if err != nil {
@@ -78,7 +78,7 @@ func (g *Games) CreateGame(owner *User, name string, maxPlayers int, password st
 }
 
 // FetchActiveGames returns active games from the db
-func (g *Games) FetchActiveGames() (results []*KabooGame, err error) {
+func (g *GamesDAO) FetchActiveGames() (results []*KabooGame, err error) {
 	filter := bson.M{"active": true}
 	cursor, err := g.collection.Find(context.Background(), filter)
 	if err != nil {
@@ -94,7 +94,7 @@ func (g *Games) FetchActiveGames() (results []*KabooGame, err error) {
 }
 
 // IsPlayerInActiveGame returns if given player is participating in any active game
-func (g *Games) IsPlayerInActiveGame(user primitive.ObjectID) (bool, error) {
+func (g *GamesDAO) IsPlayerInActiveGame(user primitive.ObjectID) (bool, error) {
 	filter := bson.M{"players": user, "active": true}
 	count, err := g.collection.CountDocuments(context.Background(), filter)
 	if err != nil {

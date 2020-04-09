@@ -34,11 +34,11 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 	if err != nil {
 		return nil, err
 	}
-	if res, err := g.db.Games.IsPlayerInActiveGame(user.ID); err != nil || res {
+	if res, err := g.db.GamesDAO.IsPlayerInActiveGame(user.ID); err != nil || res {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return nil, errors.New("User already in game")
 	}
-	game, err := g.db.Games.CreateGame(user, name, maxPlayers, password)
+	game, err := g.db.GamesDAO.CreateGame(user, name, maxPlayers, password)
 	if err != nil {
 		return nil, errors.New("Error creating game")
 	}
@@ -50,7 +50,7 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 }
 
 func (g *GameController) loadGames() error {
-	games, err := g.db.Games.FetchActiveGames()
+	games, err := g.db.GamesDAO.FetchActiveGames()
 	if err != nil {
 		return err
 	}
