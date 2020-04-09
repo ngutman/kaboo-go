@@ -74,7 +74,7 @@ func (d *Db) CreateGame(owner *User, name string, maxPlayers int, password strin
 
 // FetchActiveGames returns active games from the db
 func (d *Db) FetchActiveGames() (results []*KabooGame, err error) {
-	filter := bson.D{bson.E{Key: "active", Value: true}}
+	filter := bson.M{"active": true}
 	cursor, err := d.database.Collection(GamesCollection).Find(context.Background(), filter)
 	if err != nil {
 		log.Errorf("Error fetching active games, %v\n", err)
@@ -86,6 +86,17 @@ func (d *Db) FetchActiveGames() (results []*KabooGame, err error) {
 		return results, err
 	}
 	return results, nil
+}
+
+// IsPlayerInActiveGame returns if given player is participating in any active game
+func (d *Db) IsPlayerInActiveGame(user primitive.ObjectID) (bool, error) {
+	filter := bson.M{"players": user, "active": true}
+	count, err := d.database.Collection(GamesCollection).CountDocuments(context.Background(), filter)
+	if err != nil {
+		log.Errorf("Error fetching player games, %v\n", err)
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func generateGameSeed() (seed string, err error) {

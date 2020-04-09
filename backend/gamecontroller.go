@@ -34,7 +34,7 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 	if err != nil {
 		return nil, err
 	}
-	if g.activeGames[user.ID] != nil {
+	if res, err := g.db.IsPlayerInActiveGame(user.ID); err != nil || res {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return nil, errors.New("User already in game")
 	}
