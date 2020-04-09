@@ -2,9 +2,10 @@ package models
 
 import (
 	"context"
+	"log"
+
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 )
 
 // Db access the underlying db
@@ -14,7 +15,7 @@ type Db struct {
 }
 
 // Open a new connection to the db and sets the the client
-func (d *Db) Open(uri string) {
+func (d *Db) Open(uri string, dbname string) {
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
@@ -27,6 +28,6 @@ func (d *Db) Open(uri string) {
 		return
 	}
 	d.client = client
-	d.database = client.Database("kaboo")
+	d.database = client.Database(dbname)
 	log.Printf("Connected to MongoDB (%v)\n", uri)
 }

@@ -3,24 +3,22 @@ package backend
 import (
 	"context"
 	"errors"
+
 	"github.com/ngutman/kaboo-server-go/api/types"
 	"github.com/ngutman/kaboo-server-go/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// KabooGame represents a game, contains the game state
-type KabooGame struct {
-}
 
 // GameController manages the games, allows players to join, leave or create games
 type GameController struct {
-	games map[models.User]*KabooGame
+	games map[primitive.ObjectID]*models.KabooGame
 	db    *models.Db
 }
 
 // NewGameController returns a new game controller
 func NewGameController(db *models.Db) *GameController {
 	return &GameController{
-		games: make(map[models.User]*KabooGame),
+		games: make(map[primitive.ObjectID]*models.KabooGame),
 		db:    db,
 	}
 }
@@ -34,8 +32,11 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 	if err != nil {
 		return nil, err
 	}
-	if g.games[*user] != nil {
+	if g.games[user.ID] != nil {
 		return nil, errors.New("User already in game")
 	}
+	game := g.db.CreateEmptyGame(user)
+	g.games[user.ID] = game
+	result.GameID = game.ID.Hex()
 	return &result, nil
 }

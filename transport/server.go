@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/ngutman/kaboo-server-go/api/types"
 	"github.com/ngutman/kaboo-server-go/backend"
 	"github.com/ngutman/kaboo-server-go/models"
-	"log"
-	"net/http"
-	"os"
 )
 
 // Server main kaboo server
@@ -29,7 +30,7 @@ type API struct {
 // NewServer initializes a new kaboo server
 func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience string) Server {
 	var db models.Db
-	db.Open("mongodb://localhost:27017/")
+	db.Open("mongodb://localhost:27017/", "kaboo")
 	return Server{
 		JWTAuthMiddleware{auth0Domain, auth0Audience},
 		API{
