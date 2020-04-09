@@ -17,10 +17,8 @@ import (
 type GameState int
 
 // Game states
-// GameStateInitializing - New game, first state
 const (
-	GameStateInitializing GameState = iota
-	GameStateWaitingForPlayers
+	GameStateWaitingForPlayers GameState = iota
 	GameStateOngoing
 )
 
@@ -44,7 +42,7 @@ type KabooGame struct {
 	Seed       string               `bson:"seed"`
 }
 
-// Games is handling all game related actions against the db
+// GamesDAO is handling all game related actions against the db
 type GamesDAO struct {
 	collection *mongo.Collection
 }
@@ -60,7 +58,7 @@ func (g *GamesDAO) CreateGame(owner *User, name string, maxPlayers int, password
 	game := KabooGame{
 		primitive.NilObjectID,
 		owner.ID,
-		GameStateInitializing,
+		GameStateWaitingForPlayers,
 		true,
 		[]primitive.ObjectID{owner.ID},
 		maxPlayers,

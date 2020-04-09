@@ -14,6 +14,7 @@ type Db struct {
 	client   *mongo.Client
 	database *mongo.Database
 	GamesDAO *GamesDAO
+	UserDAO  *UserDAO
 }
 
 // Open a new connection to the db and sets the the client
@@ -33,6 +34,9 @@ func (d *Db) Open(uri string, dbname string) {
 	d.database = client.Database(dbname)
 	d.GamesDAO = &GamesDAO{
 		collection: d.database.Collection(GamesCollection),
+	}
+	d.UserDAO = &UserDAO{
+		collection: d.database.Collection(UserCollection),
 	}
 	log.Infof("Connected to MongoDB (%v)\n", uri)
 }

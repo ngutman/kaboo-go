@@ -30,11 +30,12 @@ func NewGameController(db *models.Db) *GameController {
 // A player can only create a game if he's not participating in any running games
 func (g *GameController) NewGame(ctx context.Context, name string,
 	maxPlayers int, password string) (*types.NewGameResult, error) {
-	user, err := g.db.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
+	user, err := g.db.UserDAO.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
 	if err != nil {
 		return nil, err
 	}
-	if res, err := g.db.GamesDAO.IsPlayerInActiveGame(user.ID); err != nil || res {
+	// TODO: This is pretty bad, need to check if there's error (got a bit lazy)
+	if playerActiveInGame, err := g.db.GamesDAO.IsPlayerInActiveGame(user.ID); err != nil || playerActiveInGame {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return nil, errors.New("User already in game")
 	}

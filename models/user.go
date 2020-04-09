@@ -5,6 +5,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+const (
+	// UserCollection is the users mongo collection name
+	UserCollection = "users"
 )
 
 // User object in the system
@@ -14,12 +20,17 @@ type User struct {
 	Username   string             `bson:"username"`
 }
 
+// UserDAO handles all user related db interactions
+type UserDAO struct {
+	collection *mongo.Collection
+}
+
 // FetchUserByExternalID returns a user using his external id (e.g. Auth0)
 // TODO: Add missing indices
-func (d *Db) FetchUserByExternalID(externalID string) (user *User, err error) {
+func (d *UserDAO) FetchUserByExternalID(externalID string) (user *User, err error) {
 	var returnedUser User
 	filter := bson.M{"external_id": externalID}
-	err = d.database.Collection("users").FindOne(context.Background(), filter).Decode(&returnedUser)
+	err = d.collection.FindOne(context.Background(), filter).Decode(&returnedUser)
 	if err != nil {
 		return nil, err
 	}
