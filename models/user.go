@@ -18,7 +18,7 @@ type User struct {
 // TODO: Add missing indices
 func (d *Db) FetchUserByExternalID(externalID string) (user *User, err error) {
 	var returnedUser User
-	filter := bson.D{bson.E{Key: "external_id", Value: externalID}}
+	filter := bson.M{"external_id": externalID}
 	err = d.database.Collection("users").FindOne(context.Background(), filter).Decode(&returnedUser)
 	if err != nil {
 		return nil, err

@@ -36,7 +36,7 @@ func Test_CreatingNewGame(t *testing.T) {
 	}
 	var game models.KabooGame
 	client.Database(TestingDB).Collection(models.GamesCollection).
-		FindOne(context.Background(), bson.D{bson.E{Key: "_id", Value: createdGameID}}).Decode(&game)
+		FindOne(context.Background(), bson.M{"_id": createdGameID}).Decode(&game)
 	if game.Owner != user.ID {
 		t.Errorf("Unexpected game created %v\n", game)
 	}
