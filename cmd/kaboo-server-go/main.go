@@ -2,12 +2,23 @@ package main
 
 // Import our dependencies. We'll use the standard HTTP library as well as the gorilla router for this app
 import (
-	"github.com/ngutman/kaboo-server-go/transport"
-	"log"
 	"os"
+
+	"github.com/ngutman/kaboo-server-go/transport"
+	log "github.com/sirupsen/logrus"
 
 	cli "github.com/urfave/cli/v2"
 )
+
+func init() {
+	log.SetFormatter(&log.TextFormatter{
+		ForceColors:   true,
+		PadLevelText:  true,
+		FullTimestamp: true,
+	})
+
+	log.SetLevel(log.TraceLevel)
+}
 
 func main() {
 	var restPort int

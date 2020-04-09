@@ -15,6 +15,7 @@ type User struct {
 }
 
 // FetchUserByExternalID returns a user using his external id (e.g. Auth0)
+// TODO: Add missing indices
 func (d *Db) FetchUserByExternalID(externalID string) (user *User, err error) {
 	var returnedUser User
 	filter := bson.D{bson.E{Key: "external_id", Value: externalID}}

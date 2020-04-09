@@ -2,7 +2,8 @@ package models
 
 import (
 	"context"
-	"log"
+
+	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,5 +30,5 @@ func (d *Db) Open(uri string, dbname string) {
 	}
 	d.client = client
 	d.database = client.Database(dbname)
-	log.Printf("Connected to MongoDB (%v)\n", uri)
+	log.Infof("Connected to MongoDB (%v)\n", uri)
 }

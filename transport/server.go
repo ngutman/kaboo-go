@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -51,7 +51,8 @@ func (s *Server) Start() {
 	r.HandleFunc("/api/state", s.authMiddleware.Handle(notImplemented))
 	r.HandleFunc("/api/ws", s.authMiddleware.Handle(notImplemented))
 
-	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(os.Stdout, r))
+	log.Infof("Starting API server (:%v)\n", s.restPort)
+	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(log.StandardLogger().Out, r))
 }
 
 func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +60,6 @@ func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request) {
 	if tryToDecodeOrFail(w, r, &req) != nil {
 		return
 	}
-	log.Printf("Creating a new game named %s with max players %d password %s\n", req.Name, req.MaxPlayersCount, req.Password)
 	res, err := a.gameBackend.NewGame(r.Context(), req.Name, req.MaxPlayersCount, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
