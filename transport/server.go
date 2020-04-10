@@ -19,6 +19,7 @@ import (
 type Server struct {
 	authMiddleware JWTAuthMiddleware
 	api            API
+	hub            *Hub
 	restPort       int
 	webSocketPort  int
 }
@@ -31,11 +32,14 @@ type API struct {
 func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience string) Server {
 	var db models.Db
 	db.Open("mongodb://localhost:27017/", "kaboo")
+	hub := newHub()
+	go hub.run()
 	return Server{
 		JWTAuthMiddleware{auth0Domain, auth0Audience},
 		API{
 			gameBackend: backend.NewGameController(&db),
 		},
+		hub,
 		restPort,
 		wsPort,
 	}
@@ -44,12 +48,18 @@ func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience strin
 // Start starts the server
 func (s *Server) Start() {
 	r := mux.NewRouter()
+	// TODO: Remove in prod
+	r.Use(handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowCredentials(),
+	))
 	r.HandleFunc("/api/game/new", s.authMiddleware.Handle(s.api.handleNewGame))
 	r.HandleFunc("/api/game/join", s.authMiddleware.Handle(s.api.handleJoinGame))
 	r.HandleFunc("/api/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
 
 	r.HandleFunc("/api/state", s.authMiddleware.Handle(notImplemented))
-	r.HandleFunc("/api/ws", s.authMiddleware.Handle(notImplemented))
+	r.HandleFunc("/api/ws", s.authMiddleware.Handle(s.hub.handleWSUpgradeRequest))
 
 	log.Infof("Starting API server (:%v)\n", s.restPort)
 	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(log.StandardLogger().Out, r))
