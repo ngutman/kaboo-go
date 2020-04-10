@@ -21,15 +21,15 @@ type Server struct {
 	api            API
 	hub            *Hub
 	restPort       int
-	webSocketPort  int
 }
 
+// API wires incoming requests to their respective backend engines
 type API struct {
 	gameBackend types.GameBackend
 }
 
 // NewServer initializes a new kaboo server
-func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience string) Server {
+func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 	var db models.Db
 	db.Open("mongodb://localhost:27017/", "kaboo")
 	hub := newHub()
@@ -41,7 +41,6 @@ func NewServer(restPort int, wsPort int, auth0Domain string, auth0Audience strin
 		},
 		hub,
 		restPort,
-		wsPort,
 	}
 }
 

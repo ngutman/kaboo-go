@@ -22,7 +22,6 @@ func init() {
 
 func main() {
 	var restPort int
-	var websocketPort int
 	var auth0Domain string
 	var auth0Audience string
 	app := &cli.App{
@@ -33,12 +32,6 @@ func main() {
 				Value:       3001,
 				Usage:       "API REST listen port",
 				Destination: &restPort,
-			},
-			&cli.IntFlag{
-				Name:        "websocket-port",
-				Value:       3002,
-				Usage:       "API WebSocket listen port",
-				Destination: &websocketPort,
 			},
 			&cli.StringFlag{
 				Name:        "auth0-domain",
@@ -55,7 +48,7 @@ func main() {
 		},
 		Usage: "Kaboo server FTW",
 		Action: func(c *cli.Context) error {
-			server := transport.NewServer(restPort, websocketPort, auth0Domain, auth0Audience)
+			server := transport.NewServer(restPort, auth0Domain, auth0Audience)
 			server.Start()
 			return nil
 		},
