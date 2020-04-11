@@ -42,8 +42,7 @@ func (j *JWTAuthMiddleware) Handle(next func(w http.ResponseWriter, r *http.Requ
 		token, err := validator.ValidateRequest(r)
 		if err != nil {
 			log.Errorf("Token %v is invalid, %v\n", token, err)
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		} else {
 			claims := jwt.Claims{}
 			validator.Claims(r, token, &claims)

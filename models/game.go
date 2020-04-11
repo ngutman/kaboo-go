@@ -92,14 +92,13 @@ func (g *GamesDAO) FetchActiveGames() (results []*KabooGame, err error) {
 }
 
 // IsPlayerInActiveGame returns if given player is participating in any active game
-func (g *GamesDAO) IsPlayerInActiveGame(user primitive.ObjectID) (bool, error) {
+func (g *GamesDAO) IsPlayerInActiveGame(user primitive.ObjectID) bool {
 	filter := bson.M{"players": user, "active": true}
 	count, err := g.collection.CountDocuments(context.Background(), filter)
 	if err != nil {
-		log.Errorf("Error fetching player games, %v\n", err)
-		return false, err
+		log.Panicf("Error fetching player games, %v\n", err)
 	}
-	return count > 0, nil
+	return count > 0
 }
 
 func generateGameSeed() (seed string, err error) {
