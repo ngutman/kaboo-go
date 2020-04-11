@@ -35,7 +35,11 @@ func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 	hub := newHub()
 	go hub.run()
 	return Server{
-		JWTAuthMiddleware{auth0Domain, auth0Audience},
+		JWTAuthMiddleware{
+			&db,
+			auth0Domain,
+			auth0Audience,
+		},
 		API{
 			gameBackend: backend.NewGameController(&db),
 		},
@@ -64,25 +68,34 @@ func (s *Server) Start() {
 	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(log.StandardLogger().Out, r))
 }
 
-func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request) {
+func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request, user *models.User) {
 	var req createGameReq
 	if tryToDecodeOrFail(w, r, &req) != nil {
 		return
 	}
-	gameID, err := a.gameBackend.NewGame(r.Context(), req.Name, req.MaxPlayersCount, req.Password)
+	gameID, err := a.gameBackend.NewGame(user, req.Name, req.MaxPlayersCount, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	tryToWriteJSONResponse(w, r, &types.NewGameResult{GameID: gameID})
+	tryToWriteJSONResponse(w, r, &createGameRes{GameID: gameID})
 }
 
-func (a *API) handleJoinGame(w http.ResponseWriter, r *http.Request) {
-	notImplemented(w, r)
+func (a *API) handleJoinGame(w http.ResponseWriter, r *http.Request, user *models.User) {
+	var req joinGameReq
+	if tryToDecodeOrFail(w, r, &req) != nil {
+		return
+	}
+	success, err := a.gameBackend.JoinGameByGameID(user, req.GameID, req.Password)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	tryToWriteJSONResponse(w, r, &joinGameRes{Success: success})
 }
 
-func (a *API) handleLeaveGame(w http.ResponseWriter, r *http.Request) {
-	notImplemented(w, r)
+func (a *API) handleLeaveGame(w http.ResponseWriter, r *http.Request, user *models.User) {
+	notImplemented(w, r, user)
 }
 
 func tryToDecodeOrFail(w http.ResponseWriter, r *http.Request, dst interface{}) error {
@@ -109,6 +122,6 @@ func tryToWriteJSONResponse(w http.ResponseWriter, r *http.Request, res interfac
 	return nil
 }
 
-func notImplemented(w http.ResponseWriter, r *http.Request) {
+func notImplemented(w http.ResponseWriter, r *http.Request, user *models.User) {
 	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 }

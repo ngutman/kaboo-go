@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/golang/gddo/httputil/header"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/golang/gddo/httputil/header"
 )
 
 type createGameReq struct {
@@ -18,6 +19,15 @@ type createGameReq struct {
 
 type createGameRes struct {
 	GameID string `json:"id"`
+}
+
+type joinGameReq struct {
+	GameID   string `json:"gameid"`
+	Password string `json:"password"`
+}
+
+type joinGameRes struct {
+	Success bool `json:"success"`
 }
 
 type malformedRequest struct {

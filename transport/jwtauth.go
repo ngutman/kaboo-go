@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,27 +9,28 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/auth0-community/go-auth0"
-	"github.com/ngutman/kaboo-server-go/api/types"
+	"github.com/ngutman/kaboo-server-go/models"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 // JWTAuthMiddleware handles Auth0 JWT validation
 type JWTAuthMiddleware struct {
+	db            *models.Db
 	auth0Domain   string
 	auth0Audience string
 }
 
 // Handle implements the JWT validation over incoming request
-func (j *JWTAuthMiddleware) Handle(next func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func (j *JWTAuthMiddleware) Handle(next func(w http.ResponseWriter, r *http.Request, user *models.User)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// For faster development allowed to skip token authentication in DEBUG mode
 		if os.Getenv("DEBUG") != "" {
 			debugToken := regexp.MustCompile(`DebugToken (.*)`).FindStringSubmatch(r.Header.Get("Authorization"))
 			if len(debugToken) > 1 {
 				log.Debugf("Debug token, setting user to %v\n", debugToken[1])
-				r = r.WithContext(context.WithValue(r.Context(), types.ContextUserKey, debugToken[1]))
-				next(w, r)
+				user, _ := j.db.UserDAO.FetchUserByExternalID(debugToken[1])
+				next(w, r, user)
 				return
 			}
 		}
@@ -46,9 +46,9 @@ func (j *JWTAuthMiddleware) Handle(next func(w http.ResponseWriter, r *http.Requ
 		} else {
 			claims := jwt.Claims{}
 			validator.Claims(r, token, &claims)
-			// Attach user id to request context
-			r = r.WithContext(context.WithValue(r.Context(), types.ContextUserKey, claims.Subject))
-			next(w, r)
+			// Attach user to request context
+			user, _ := j.db.UserDAO.FetchUserByExternalID(claims.Subject)
+			next(w, r, user)
 		}
 	}
 }

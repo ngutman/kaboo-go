@@ -1,21 +1,10 @@
 package types
 
 import (
-	"context"
+	"github.com/ngutman/kaboo-server-go/models"
 )
-
-const (
-	ContextUserKey = "userKey"
-)
-
-type NewGameResult struct {
-	GameID string
-}
-
-type JoinGameResult struct {
-	GameID string
-}
 
 type GameBackend interface {
-	NewGame(ctx context.Context, name string, playersCount int, password string) (string, error)
+	NewGame(user *models.User, name string, playersCount int, password string) (string, error)
+	JoinGameByGameID(user *models.User, strGameID string, password string) (bool, error)
 }

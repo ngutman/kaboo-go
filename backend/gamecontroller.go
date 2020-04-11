@@ -1,11 +1,9 @@
 package backend
 
 import (
-	"context"
 	"errors"
 	"sync"
 
-	"github.com/ngutman/kaboo-server-go/api/types"
 	"github.com/ngutman/kaboo-server-go/models"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -44,12 +42,8 @@ func NewGameController(db *models.Db) *GameController {
 
 // NewGame create a new game returning the created game id on success
 // A player can only create a game if he's not participating in any running games
-func (g *GameController) NewGame(ctx context.Context, name string,
+func (g *GameController) NewGame(user *models.User, name string,
 	maxPlayers int, password string) (string, error) {
-	user, err := g.db.UserDAO.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
-	if err != nil {
-		return "", ErrUserNotFound
-	}
 	if g.db.GamesDAO.IsPlayerInActiveGame(user.ID) {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return "", ErrAlreadyInGame
@@ -65,11 +59,7 @@ func (g *GameController) NewGame(ctx context.Context, name string,
 }
 
 // JoinGameByGameID the user asks to join a specific game
-func (g *GameController) JoinGameByGameID(ctx context.Context, strGameID string, password string) (bool, error) {
-	user, err := g.db.UserDAO.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
-	if err != nil {
-		return false, ErrUserNotFound
-	}
+func (g *GameController) JoinGameByGameID(user *models.User, strGameID string, password string) (bool, error) {
 	if g.db.GamesDAO.IsPlayerInActiveGame(user.ID) {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
 		return false, ErrAlreadyInGame

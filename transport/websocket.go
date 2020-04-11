@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ngutman/kaboo-server-go/api/types"
+	"github.com/ngutman/kaboo-server-go/models"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
@@ -78,20 +78,18 @@ func (h *Hub) run() {
 	}
 }
 
-func (h *Hub) handleWSUpgradeRequest(w http.ResponseWriter, r *http.Request) {
+func (h *Hub) handleWSUpgradeRequest(w http.ResponseWriter, r *http.Request, user *models.User) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Errorf("Error upgrading client connection, %v\n", err)
 	}
-	// TODO: Validate user in db? (even if JWT was validated)
-	userID := r.Context().Value(types.ContextUserKey).(string)
 	client := &WebsocketClient{
 		hub:    h,
 		conn:   conn,
 		send:   make(chan []byte, 256),
-		userID: userID,
+		userID: user.ID.Hex(),
 	}
-	log.Debugf("Client %v (%v) connected\n", userID, r.RemoteAddr)
+	log.Debugf("Client %v (%v) connected\n", user, r.RemoteAddr)
 	h.register <- client
 
 	go client.readPump()

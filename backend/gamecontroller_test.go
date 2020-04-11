@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ngutman/kaboo-server-go/api/types"
 	"github.com/ngutman/kaboo-server-go/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,14 +21,13 @@ func Test_CreatingNewGame(t *testing.T) {
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
 
 	controller := NewGameController(db)
-	ctx := contextWithUserID("userid123")
-	gameID, err := controller.NewGame(ctx, "game1", 5, "password")
+	gameID, err := controller.NewGame(user, "game1", 5, "password")
 	createdGameID, _ := primitive.ObjectIDFromHex(gameID)
 	if err != nil {
 		t.Errorf("Error creating a new game, %v\n", err)
 	}
 	t.Logf("Created a new game result %v\n", gameID)
-	_, err = controller.NewGame(ctx, "game1", 5, "password")
+	_, err = controller.NewGame(user, "game1", 5, "password")
 	if err == nil {
 		t.Errorf("Should have failed creating a new game for user")
 	}
@@ -50,10 +48,6 @@ func Test_LoadingActiveGames(t *testing.T) {
 	if controller.userToActiveGames[user.ID] == nil || controller.activeGames[game.ID] == nil {
 		t.Errorf("Should have loaded active game from db")
 	}
-}
-
-func contextWithUserID(externalUserID string) context.Context {
-	return context.WithValue(context.Background(), types.ContextUserKey, externalUserID)
 }
 
 func clearAndOpenDb(t *testing.T) (*models.Db, *mongo.Client) {
