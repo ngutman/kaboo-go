@@ -12,9 +12,14 @@ import (
 )
 
 var (
-	ErrUserNotFound  = errors.New("User not found")
+	// ErrUserNotFound user not found error
+	ErrUserNotFound = errors.New("User not found")
+
+	// ErrAlreadyInGame user already in game
 	ErrAlreadyInGame = errors.New("User already in game")
-	ErrCreateGame    = errors.New("Failed creating game")
+
+	// ErrCreateGame failure creating game
+	ErrCreateGame = errors.New("Failed creating game")
 )
 
 // GameController manages the games, allows players to join, leave or create games
@@ -40,38 +45,44 @@ func NewGameController(db *models.Db) *GameController {
 // NewGame create a new game returning the created game id on success
 // A player can only create a game if he's not participating in any running games
 func (g *GameController) NewGame(ctx context.Context, name string,
-	maxPlayers int, password string) (*types.NewGameResult, error) {
+	maxPlayers int, password string) (string, error) {
 	user, err := g.db.UserDAO.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
 	if err != nil {
-		return nil, ErrUserNotFound
+		return "", ErrUserNotFound
 	}
 	if g.db.GamesDAO.IsPlayerInActiveGame(user.ID) {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
-		return nil, ErrAlreadyInGame
+		return "", ErrAlreadyInGame
 	}
 	game, err := g.db.GamesDAO.CreateGame(user, name, maxPlayers, password)
 	if err != nil {
-		return nil, ErrCreateGame
+		return "", ErrCreateGame
 	}
 
-	g.registerGame(game)
+	g.registerActiveGame(game)
 
-	var result types.NewGameResult
-	result.GameID = game.ID.Hex()
-	return &result, nil
+	return game.ID.Hex(), nil
 }
 
 // JoinGameByGameID the user asks to join a specific game
-func (g *GameController) JoinGameByGameID(ctx context.Context, gameID string) (*types.JoinGameResult, error) {
+func (g *GameController) JoinGameByGameID(ctx context.Context, strGameID string, password string) (bool, error) {
 	user, err := g.db.UserDAO.FetchUserByExternalID(ctx.Value(types.ContextUserKey).(string))
 	if err != nil {
-		return nil, ErrUserNotFound
+		return false, ErrUserNotFound
 	}
 	if g.db.GamesDAO.IsPlayerInActiveGame(user.ID) {
 		log.Debugf("User %v (%v) already participating in a game\n", user.Username, user.ID.Hex())
-		return nil, ErrAlreadyInGame
+		return false, ErrAlreadyInGame
 	}
-	return nil, nil
+	gameID, _ := primitive.ObjectIDFromHex(strGameID)
+	game := g.activeGames[gameID]
+	if game.State != models.GameStateWaitingForPlayers {
+		return true, nil
+	}
+	// 1. Check game status
+	// 2. Check enough players
+	// 3. Check password
+	return true, nil
 }
 
 func (g *GameController) loadGames() error {
@@ -80,13 +91,13 @@ func (g *GameController) loadGames() error {
 		return err
 	}
 	for _, game := range games {
-		g.registerGame(game)
+		g.registerActiveGame(game)
 	}
 	log.Infof("Loaded %d active games\n", len(games))
 	return nil
 }
 
-func (g *GameController) registerGame(game *models.KabooGame) {
+func (g *GameController) registerActiveGame(game *models.KabooGame) {
 	g.gameMtx.Lock()
 	defer g.gameMtx.Unlock()
 

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ngutman/kaboo-server-go/api/types"
-
 	"github.com/ngutman/kaboo-server-go/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -24,13 +23,13 @@ func Test_CreatingNewGame(t *testing.T) {
 
 	controller := NewGameController(db)
 	ctx := contextWithUserID("userid123")
-	result, err := controller.NewGame(ctx, "game1", 5, "password")
-	createdGameID, _ := primitive.ObjectIDFromHex(result.GameID)
+	gameID, err := controller.NewGame(ctx, "game1", 5, "password")
+	createdGameID, _ := primitive.ObjectIDFromHex(gameID)
 	if err != nil {
 		t.Errorf("Error creating a new game, %v\n", err)
 	}
-	t.Logf("Created a new game result %v\n", result)
-	result, err = controller.NewGame(ctx, "game1", 5, "password")
+	t.Logf("Created a new game result %v\n", gameID)
+	_, err = controller.NewGame(ctx, "game1", 5, "password")
 	if err == nil {
 		t.Errorf("Should have failed creating a new game for user")
 	}
@@ -46,9 +45,9 @@ func Test_LoadingActiveGames(t *testing.T) {
 	db, client := clearAndOpenDb(t)
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
 	// Create a game before loading the controller
-	db.GamesDAO.CreateGame(user, "game1", 4, "password")
+	game, _ := db.GamesDAO.CreateGame(user, "game1", 4, "password")
 	controller := NewGameController(db)
-	if controller.activeGames[user.ID] == nil {
+	if controller.userToActiveGames[user.ID] == nil || controller.activeGames[game.ID] == nil {
 		t.Errorf("Should have loaded active game from db")
 	}
 }

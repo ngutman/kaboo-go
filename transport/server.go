@@ -69,12 +69,12 @@ func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request) {
 	if tryToDecodeOrFail(w, r, &req) != nil {
 		return
 	}
-	res, err := a.gameBackend.NewGame(r.Context(), req.Name, req.MaxPlayersCount, req.Password)
+	gameID, err := a.gameBackend.NewGame(r.Context(), req.Name, req.MaxPlayersCount, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	tryToWriteJSONResponse(w, r, res)
+	tryToWriteJSONResponse(w, r, &types.NewGameResult{GameID: gameID})
 }
 
 func (a *API) handleJoinGame(w http.ResponseWriter, r *http.Request) {

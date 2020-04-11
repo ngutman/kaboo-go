@@ -20,6 +20,7 @@ type GameState int
 const (
 	GameStateWaitingForPlayers GameState = iota
 	GameStateOngoing
+	GameStateEnded
 )
 
 const (

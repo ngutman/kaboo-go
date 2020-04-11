@@ -17,5 +17,5 @@ type JoinGameResult struct {
 }
 
 type GameBackend interface {
-	NewGame(ctx context.Context, name string, playersCount int, password string) (result *NewGameResult, err error)
+	NewGame(ctx context.Context, name string, playersCount int, password string) (string, error)
 }
