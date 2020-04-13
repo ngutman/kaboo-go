@@ -10,14 +10,17 @@ import (
 )
 
 var (
-	// ErrUserNotFound user not found error
-	ErrUserNotFound = errors.New("User not found")
-
 	// ErrAlreadyInGame user already in game
 	ErrAlreadyInGame = errors.New("User already in game")
 
 	// ErrCreateGame failure creating game
 	ErrCreateGame = errors.New("Failed creating game")
+
+	// ErrJoinGameAlreadyStarted error since game already started
+	ErrJoinGameAlreadyStarted = errors.New("Game already started")
+
+	// ErrWrongGamePassword wrong password
+	ErrWrongGamePassword = errors.New("Wrong password")
 )
 
 // GameController manages the games, allows players to join, leave or create games
@@ -67,12 +70,12 @@ func (g *GameController) JoinGameByGameID(user *models.User, strGameID string, p
 	gameID, _ := primitive.ObjectIDFromHex(strGameID)
 	game := g.activeGames[gameID]
 	if game.State != models.GameStateWaitingForPlayers {
-		return true, nil
+		return false, ErrJoinGameAlreadyStarted
 	}
-	// 1. Check game status
-	// 2. Check enough players
-	// 3. Check password
-	return true, nil
+	if password != game.Password {
+		return false, ErrWrongGamePassword
+	}
+	return g.db.GamesDAO.TryToAddPlayerToGame(game, user)
 }
 
 func (g *GameController) loadGames() error {

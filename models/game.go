@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -46,6 +48,7 @@ type KabooGame struct {
 // GamesDAO is handling all game related actions against the db
 type GamesDAO struct {
 	collection *mongo.Collection
+	gmtx       sync.Mutex
 }
 
 // CreateGame creates a game for the given user
@@ -100,6 +103,23 @@ func (g *GamesDAO) IsPlayerInActiveGame(user primitive.ObjectID) bool {
 		log.Panicf("Error fetching player games, %v\n", err)
 	}
 	return count > 0
+}
+
+// TryToAddPlayerToGame attempts to add the player to the given game, will fail if there are too many players
+func (g *GamesDAO) TryToAddPlayerToGame(game *KabooGame, user *User) (bool, error) {
+	g.gmtx.Lock()
+	defer g.gmtx.Unlock()
+
+	if len(game.Players) >= game.MaxPlayers {
+		return false, fmt.Errorf("Too many players in game (maximum %d, current %d)", game.MaxPlayers, len(game.Players))
+	}
+
+	game.Players = append(game.Players, user.ID)
+	if _, err := g.collection.UpdateOne(context.Background(), bson.M{"_id": game.ID}, bson.M{"$set": bson.M{"players": game.Players}}); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func generateGameSeed() (seed string, err error) {
