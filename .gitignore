@@ -17,4 +17,4 @@
 # vendor/
 
 # Server binary (probably temp)
-kaboo-server-go
+bin/**
