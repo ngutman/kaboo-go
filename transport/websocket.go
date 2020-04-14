@@ -52,7 +52,10 @@ type Hub struct {
 
 func newHub() *Hub {
 	return &Hub{
-		upgrader:   websocket.Upgrader{},
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		},
 		clients:    make(map[*WebsocketClient]bool),
 		incoming:   make(chan ClientMessage),
 		register:   make(chan *WebsocketClient),
