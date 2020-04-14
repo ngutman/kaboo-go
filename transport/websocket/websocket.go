@@ -1,12 +1,14 @@
-package transport
+package websocket
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/ngutman/kaboo-server-go/models"
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gorilla/websocket"
 )
@@ -29,12 +31,11 @@ var (
 
 // ClientMessage a message received from a client
 type ClientMessage struct {
-	client *WebsocketClient
+	client *client
 	data   []byte
 }
 
-// WebsocketClient manages a single websocket clients, handling reading and writing
-type WebsocketClient struct {
+type client struct {
 	hub    *Hub
 	conn   *websocket.Conn
 	send   chan []byte
@@ -43,35 +44,41 @@ type WebsocketClient struct {
 
 // Hub registers, un-registers and manages websocket lifecycle
 type Hub struct {
-	upgrader   websocket.Upgrader
-	clients    map[*WebsocketClient]bool
-	incoming   chan ClientMessage
-	register   chan *WebsocketClient
-	unregister chan *WebsocketClient
+	upgrader       websocket.Upgrader
+	clients        map[*client]bool
+	usersToClients map[string]*client
+	incoming       chan ClientMessage
+	register       chan *client
+	unregister     chan *client
 }
 
-func newHub() *Hub {
+// NewHub create a new hub instance
+func NewHub() *Hub {
 	return &Hub{
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		clients:    make(map[*WebsocketClient]bool),
-		incoming:   make(chan ClientMessage),
-		register:   make(chan *WebsocketClient),
-		unregister: make(chan *WebsocketClient),
+		clients:        make(map[*client]bool),
+		usersToClients: make(map[string]*client),
+		incoming:       make(chan ClientMessage),
+		register:       make(chan *client),
+		unregister:     make(chan *client),
 	}
 }
 
-func (h *Hub) run() {
+// Run the hub, listens for client connections and disconnections, listens for incoming messages
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+			h.usersToClients[client.userID] = client
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				log.Debugf("Client %v (%v) disconnected\n", client.userID, client.conn.RemoteAddr().String())
 				delete(h.clients, client)
+				delete(h.usersToClients, client.userID)
 				close(client.send)
 			}
 		case clientMessage := <-h.incoming:
@@ -81,12 +88,29 @@ func (h *Hub) run() {
 	}
 }
 
-func (h *Hub) handleWSUpgradeRequest(w http.ResponseWriter, r *http.Request, user *models.User) {
+// BroadcastMessageToUsers send a message over WS to the given list of user
+func (h *Hub) BroadcastMessageToUsers(users []primitive.ObjectID, message interface{}) {
+	rawJSON, err := json.Marshal(message)
+	if err != nil {
+		log.Errorf("Failed marshalling json, %v", message)
+		return
+	}
+
+	for _, userID := range users {
+		if h.usersToClients[userID.Hex()] != nil {
+			h.usersToClients[userID.Hex()].send <- rawJSON
+			log.Debugf("Sent message to %v", userID)
+		}
+	}
+}
+
+// HandleWSUpgradeRequest attempt to upgrade the given connection to websocket and register the user
+func (h *Hub) HandleWSUpgradeRequest(w http.ResponseWriter, r *http.Request, user *models.User) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Errorf("Error upgrading client connection, %v\n", err)
 	}
-	client := &WebsocketClient{
+	client := &client{
 		hub:    h,
 		conn:   conn,
 		send:   make(chan []byte, 256),
@@ -99,7 +123,7 @@ func (h *Hub) handleWSUpgradeRequest(w http.ResponseWriter, r *http.Request, use
 	go client.writePump()
 }
 
-func (c *WebsocketClient) readPump() {
+func (c *client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		c.conn.Close()
@@ -121,7 +145,7 @@ func (c *WebsocketClient) readPump() {
 	}
 }
 
-func (c *WebsocketClient) writePump() {
+func (c *client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()

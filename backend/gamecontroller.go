@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/ngutman/kaboo-server-go/models"
+	"github.com/ngutman/kaboo-server-go/transport/websocket"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -21,22 +22,32 @@ var (
 
 	// ErrWrongGamePassword wrong password
 	ErrWrongGamePassword = errors.New("Wrong password")
+
+	// ErrGameDoesntExist game doesn't exist
+	ErrGameDoesntExist = errors.New("Game doesn't exist")
 )
+
+// MessageSender websocket message sender interface
+type MessageSender interface {
+	BroadcastMessageToUsers(users []primitive.ObjectID, message interface{})
+}
 
 // GameController manages the games, allows players to join, leave or create games
 type GameController struct {
 	userToActiveGames map[primitive.ObjectID]*models.KabooGame
 	activeGames       map[primitive.ObjectID]*models.KabooGame
 	db                *models.Db
+	sender            MessageSender
 	gameMtx           *sync.Mutex
 }
 
 // NewGameController returns a new game controller
-func NewGameController(db *models.Db) *GameController {
+func NewGameController(db *models.Db, sender MessageSender) *GameController {
 	controller := GameController{
 		userToActiveGames: make(map[primitive.ObjectID]*models.KabooGame),
 		activeGames:       make(map[primitive.ObjectID]*models.KabooGame),
 		db:                db,
+		sender:            sender,
 		gameMtx:           &sync.Mutex{},
 	}
 	controller.loadGames()
@@ -69,13 +80,23 @@ func (g *GameController) JoinGameByGameID(user *models.User, strGameID string, p
 	}
 	gameID, _ := primitive.ObjectIDFromHex(strGameID)
 	game := g.activeGames[gameID]
+	if game == nil {
+		return false, ErrGameDoesntExist
+	}
 	if game.State != models.GameStateWaitingForPlayers {
 		return false, ErrJoinGameAlreadyStarted
 	}
 	if password != game.Password {
 		return false, ErrWrongGamePassword
 	}
-	return g.db.GamesDAO.TryToAddPlayerToGame(game, user)
+	success, err := g.db.GamesDAO.TryToAddPlayerToGame(game, user)
+	if err != nil {
+		return false, err
+	}
+	g.sender.BroadcastMessageToUsers(game.Players, websocket.WSMessageUserJoinedGame{
+		MessageType: 0, GameID: game.ID.Hex(), User: websocket.User{ID: user.ID.Hex(), Name: user.Username},
+	})
+	return success, nil
 }
 
 func (g *GameController) loadGames() error {

@@ -17,11 +17,18 @@ const (
 	TestingDB  = "kaboo_test"
 )
 
+type MockSender struct{}
+
+func (m *MockSender) BroadcastMessageToUsers(users []primitive.ObjectID, message interface{}) {
+
+}
+
 func Test_CreatingNewGame(t *testing.T) {
 	db, client := clearAndOpenDb(t)
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
+	sender := &MockSender{}
 
-	controller := NewGameController(db)
+	controller := NewGameController(db, sender)
 	gameID, err := controller.NewGame(user, "game1", 5, "password")
 	createdGameID, _ := primitive.ObjectIDFromHex(gameID)
 	if err != nil {
@@ -43,9 +50,10 @@ func Test_CreatingNewGame(t *testing.T) {
 func Test_LoadingActiveGames(t *testing.T) {
 	db, client := clearAndOpenDb(t)
 	user := addUserToDB(t, client, "userid123", "user", "user@user.com")
+	sender := &MockSender{}
 	// Create a game before loading the controller
 	game, _ := db.GamesDAO.CreateGame(user, "game1", 4, "password")
-	controller := NewGameController(db)
+	controller := NewGameController(db, sender)
 	if controller.userToActiveGames[user.ID] == nil || controller.activeGames[game.ID] == nil {
 		t.Errorf("Should have loaded active game from db")
 	}
@@ -53,10 +61,11 @@ func Test_LoadingActiveGames(t *testing.T) {
 
 func Test_JoinGameSuccessfully(t *testing.T) {
 	db, client := clearAndOpenDb(t)
+	sender := &MockSender{}
 	user1 := addUserToDB(t, client, "userid1", "user1", "user1@user.com")
 	user2 := addUserToDB(t, client, "userid2", "user2", "user2@user.com")
 	game, _ := db.GamesDAO.CreateGame(user1, "game1", 2, "password")
-	controller := NewGameController(db)
+	controller := NewGameController(db, sender)
 	success, err := controller.JoinGameByGameID(user2, game.ID.Hex(), "password")
 	if err != nil || !success {
 		t.Errorf("Error joining game %v", err)
@@ -65,10 +74,11 @@ func Test_JoinGameSuccessfully(t *testing.T) {
 
 func Test_JoinGameWrongPassword(t *testing.T) {
 	db, client := clearAndOpenDb(t)
+	sender := &MockSender{}
 	user1 := addUserToDB(t, client, "userid1", "user1", "user1@user.com")
 	user2 := addUserToDB(t, client, "userid2", "user2", "user2@user.com")
 	game, _ := db.GamesDAO.CreateGame(user1, "game1", 2, "password")
-	controller := NewGameController(db)
+	controller := NewGameController(db, sender)
 	success, err := controller.JoinGameByGameID(user2, game.ID.Hex(), "WRONG")
 	if success {
 		t.Errorf("Should have failed joining game")
@@ -79,11 +89,12 @@ func Test_JoinGameWrongPassword(t *testing.T) {
 
 func Test_JoinGameTooManyPlayers(t *testing.T) {
 	db, client := clearAndOpenDb(t)
+	sender := &MockSender{}
 	user1 := addUserToDB(t, client, "userid1", "user1", "user1@user.com")
 	user2 := addUserToDB(t, client, "userid2", "user2", "user2@user.com")
 	user3 := addUserToDB(t, client, "userid3", "user3", "user2@user.com")
 	game, _ := db.GamesDAO.CreateGame(user1, "game1", 2, "password")
-	controller := NewGameController(db)
+	controller := NewGameController(db, sender)
 	if success, err := controller.JoinGameByGameID(user2, game.ID.Hex(), "password"); !success {
 		t.Errorf("Error joining game %v", err)
 	}

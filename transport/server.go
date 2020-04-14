@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ngutman/kaboo-server-go/transport/websocket"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/handlers"
@@ -19,7 +21,7 @@ import (
 type Server struct {
 	authMiddleware JWTAuthMiddleware
 	api            API
-	hub            *Hub
+	hub            *websocket.Hub
 	restPort       int
 }
 
@@ -32,8 +34,8 @@ type API struct {
 func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 	var db models.Db
 	db.Open("mongodb://localhost:27017/", "kaboo")
-	hub := newHub()
-	go hub.run()
+	hub := websocket.NewHub()
+	go hub.Run()
 	return Server{
 		JWTAuthMiddleware{
 			&db,
@@ -41,7 +43,7 @@ func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 			auth0Audience,
 		},
 		API{
-			gameBackend: backend.NewGameController(&db),
+			gameBackend: backend.NewGameController(&db, hub),
 		},
 		hub,
 		restPort,
@@ -62,7 +64,7 @@ func (s *Server) Start() {
 	r.HandleFunc("/api/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
 
 	r.HandleFunc("/api/state", s.authMiddleware.Handle(notImplemented))
-	r.HandleFunc("/api/ws", s.authMiddleware.Handle(s.hub.handleWSUpgradeRequest))
+	r.HandleFunc("/api/ws", s.authMiddleware.Handle(s.hub.HandleWSUpgradeRequest))
 
 	log.Infof("Starting API server (:%v)\n", s.restPort)
 	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(log.StandardLogger().Out, r))
