@@ -93,9 +93,7 @@ func (g *GameController) JoinGameByGameID(user *models.User, strGameID string, p
 	if err != nil {
 		return false, err
 	}
-	g.sender.BroadcastMessageToUsers(game.Players, websocket.WSMessageUserJoinedGame{
-		MessageType: 0, GameID: game.ID.Hex(), User: websocket.User{ID: user.ID.Hex(), Name: user.Username},
-	})
+	g.sender.BroadcastMessageToUsers(game.Players, websocket.NewWSMessageUserJoinedGame(game, user))
 	return success, nil
 }
 

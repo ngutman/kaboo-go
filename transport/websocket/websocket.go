@@ -88,7 +88,7 @@ func (h *Hub) Run() {
 	}
 }
 
-// BroadcastMessageToUsers send a message over WS to the given list of user
+// BroadcastMessageToUsers send a message over WS to the given list of users
 func (h *Hub) BroadcastMessageToUsers(users []primitive.ObjectID, message interface{}) {
 	rawJSON, err := json.Marshal(message)
 	if err != nil {
