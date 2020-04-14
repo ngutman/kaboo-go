@@ -4,11 +4,11 @@ This repository contains a Go implementation of the game Kaboo.
 ## Usage
 ### Compilation
 ```bash
-go build ./cmd/kaboo-server-go
+make build
 ```
 ### Running
 ```bash
-./kaboo-server-go --help
+./bin/kaboo --help
 ```
 ## Main Components
 WIP
