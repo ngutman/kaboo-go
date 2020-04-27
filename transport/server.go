@@ -13,9 +13,9 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/ngutman/kaboo-server-go/api/types"
 	"github.com/ngutman/kaboo-server-go/backend"
 	"github.com/ngutman/kaboo-server-go/models"
+	"github.com/ngutman/kaboo-server-go/types"
 )
 
 // Server main kaboo server
