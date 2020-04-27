@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/ngutman/kaboo-server-go/transport/websocket"
 
@@ -53,18 +54,20 @@ func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 // Start starts the server
 func (s *Server) Start() {
 	r := mux.NewRouter()
-	// TODO: Remove in prod
-	r.Use(handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-		handlers.AllowCredentials(),
-	))
-	r.HandleFunc("/api/game/new", s.authMiddleware.Handle(s.api.handleNewGame))
-	r.HandleFunc("/api/game/join", s.authMiddleware.Handle(s.api.handleJoinGame))
-	r.HandleFunc("/api/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
+	if os.Getenv("DEBUG") != "" {
+		r.Use(handlers.CORS(
+			handlers.AllowedOrigins([]string{"*"}),
+			handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+			handlers.AllowCredentials(),
+		))
+	}
+	apiRouter := r.PathPrefix("/api/v1").Subrouter()
+	apiRouter.HandleFunc("/game/new", s.authMiddleware.Handle(s.api.handleNewGame))
+	apiRouter.HandleFunc("/game/join", s.authMiddleware.Handle(s.api.handleJoinGame))
+	apiRouter.HandleFunc("/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
 
-	r.HandleFunc("/api/state", s.authMiddleware.Handle(notImplemented))
-	r.HandleFunc("/api/ws", s.authMiddleware.Handle(s.hub.HandleWSUpgradeRequest))
+	apiRouter.HandleFunc("/state", s.authMiddleware.Handle(notImplemented))
+	apiRouter.HandleFunc("/ws", s.authMiddleware.Handle(s.hub.HandleWSUpgradeRequest))
 
 	log.Infof("Starting API server (:%v)\n", s.restPort)
 	http.ListenAndServe(fmt.Sprintf(":%d", s.restPort), handlers.CombinedLoggingHandler(log.StandardLogger().Out, r))
