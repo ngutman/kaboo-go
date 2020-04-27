@@ -64,7 +64,7 @@ func (s *Server) Start() {
 			handlers.AllowCredentials(),
 		))
 	}
-	apiRouter := r.PathPrefix(fmt.Sprintf("api/v%s", apiVersion)).Subrouter()
+	apiRouter := r.PathPrefix(fmt.Sprintf("/api/v%s", apiVersion)).Subrouter()
 	apiRouter.HandleFunc("/game/new", s.authMiddleware.Handle(s.api.handleNewGame))
 	apiRouter.HandleFunc("/game/join", s.authMiddleware.Handle(s.api.handleJoinGame))
 	apiRouter.HandleFunc("/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
