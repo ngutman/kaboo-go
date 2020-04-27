@@ -15,7 +15,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ngutman/kaboo-server-go/backend"
 	"github.com/ngutman/kaboo-server-go/models"
-	"github.com/ngutman/kaboo-server-go/types"
+)
+
+const (
+	apiVersion = "1"
 )
 
 // Server main kaboo server
@@ -28,7 +31,7 @@ type Server struct {
 
 // API wires incoming requests to their respective backend engines
 type API struct {
-	gameBackend types.GameBackend
+	gameController *backend.GameController
 }
 
 // NewServer initializes a new kaboo server
@@ -44,7 +47,7 @@ func NewServer(restPort int, auth0Domain string, auth0Audience string) Server {
 			auth0Audience,
 		},
 		API{
-			gameBackend: backend.NewGameController(&db, hub),
+			gameController: backend.NewGameController(&db, hub),
 		},
 		hub,
 		restPort,
@@ -61,7 +64,7 @@ func (s *Server) Start() {
 			handlers.AllowCredentials(),
 		))
 	}
-	apiRouter := r.PathPrefix("/api/v1").Subrouter()
+	apiRouter := r.PathPrefix(fmt.Sprintf("api/v%s", apiVersion)).Subrouter()
 	apiRouter.HandleFunc("/game/new", s.authMiddleware.Handle(s.api.handleNewGame))
 	apiRouter.HandleFunc("/game/join", s.authMiddleware.Handle(s.api.handleJoinGame))
 	apiRouter.HandleFunc("/game/leave", s.authMiddleware.Handle(s.api.handleLeaveGame))
@@ -78,7 +81,7 @@ func (a *API) handleNewGame(w http.ResponseWriter, r *http.Request, user *models
 	if tryToDecodeOrFail(w, r, &req) != nil {
 		return
 	}
-	gameID, err := a.gameBackend.NewGame(user, req.Name, req.MaxPlayersCount, req.Password)
+	gameID, err := a.gameController.NewGame(user, req.Name, req.MaxPlayersCount, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -91,7 +94,7 @@ func (a *API) handleJoinGame(w http.ResponseWriter, r *http.Request, user *model
 	if tryToDecodeOrFail(w, r, &req) != nil {
 		return
 	}
-	success, err := a.gameBackend.JoinGameByGameID(user, req.GameID, req.Password)
+	success, err := a.gameController.JoinGameByGameID(user, req.GameID, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
